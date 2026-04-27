@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bar Gestionale</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <svg class="logo" viewBox="0 0 32 32" fill="none" aria-label="Bar Gestionale">
+        <rect x="6" y="4" width="20" height="3" rx="1.5" fill="currentColor" opacity=".9"/>
+        <path d="M9 7 L8 26 Q8 28 10 28 L22 28 Q24 28 24 26 L23 7Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M9.5 14 Q16 18 22.5 14" stroke="currentColor" stroke-width="1.2" fill="none" opacity=".6"/>
+        <circle cx="22" cy="10" r="4" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".5"/>
+        <path d="M22 7 L26 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity=".5"/>
+      </svg>
+      <span class="logo-text">Bar Gestionale</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#tavoli"      class="nav-item" data-view="tavoli">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="9" width="16" height="2" rx="1"/><rect x="4" y="11" width="2" height="5" rx="1"/><rect x="14" y="11" width="2" height="5" rx="1"/><rect x="5" y="3" width="10" height="6" rx="1.5"/></svg>
+        Tavoli
+      </a>
+      <a href="#pos"         class="nav-item" data-view="pos">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="16" height="13" rx="2"/><path d="M6 9h2M10 9h2M6 12h2M10 12h2M14 9v3"/><path d="M2 7h16"/></svg>
+        Comande / POS
+      </a>
+      <a href="#menu"        class="nav-item" data-view="menu">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M4 9h8M4 13h10"/><rect x="12" y="10" width="5" height="7" rx="1"/></svg>
+        Menu & Ricette
+      </a>
+      <a href="#ingredienti" class="nav-item" data-view="ingredienti">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3 C6 3 3 7 3 11 a7 7 0 0 0 14 0 C17 7 14 3 10 3Z"/><path d="M10 3 v4M7 5.5 l2 2M13 5.5 l-2 2"/></svg>
+        Ingredienti
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="theme-toggle" data-theme-toggle aria-label="Cambia tema">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <span class="sidebar-version">v0.1 — Fase 1</span>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main id="main">
+    <div id="view-container">
+      <!-- Le view vengono iniettate qui via JS -->
+    </div>
+  </main>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script src="views/tavoli.js"></script>
+<script src="views/pos.js"></script>
+<script src="views/menu.js"></script>
+<script src="views/ingredienti.js"></script>
+<script src="views/magazzino.js"></script>
+<script src="views/fornitori.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
