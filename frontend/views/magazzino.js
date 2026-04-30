@@ -83,33 +83,59 @@ function magStatusBadge(s) {
 function magRenderTable(items) {
   const wrap = document.getElementById('inv-table-wrap');
   if (!wrap) return;
+
   if (!items.length) {
     wrap.innerHTML = `<div class="empty-state"><p>Nessun ingrediente trovato</p></div>`;
     return;
   }
-  wrap.innerHTML = `
-    <table class="data-table">
-      <thead><tr>
-        <th>Ingrediente</th><th>Unità</th>
-        <th class="num">Scorta</th><th class="num">Soglia min.</th>
-        <th>Stato</th><th class="num">Valore</th><th></th>
-      </tr></thead>
-      <tbody>
-        ${items.map(i => `
-          <tr>
-            <td class="fw-medium">${magEsc(i.name)}</td>
-            <td>${magEsc(i.base_unit)}</td>
-            <td class="num tabular">${Number(i.current_stock).toFixed(2)}</td>
-            <td class="num tabular">${Number(i.min_stock) > 0 ? Number(i.min_stock).toFixed(2) : '<span class="text-muted">—</span>'}</td>
-            <td>${magStatusBadge(i.status)}</td>
-            <td class="num tabular">€${(i.current_stock * i.theoretical_unit_cost).toFixed(2)}</td>
-            <td><button class="btn btn-sm btn-outline"
-              onclick="magOpenMovModal(${i.id},${JSON.stringify(i.name)},${JSON.stringify(i.base_unit)},${i.min_stock})">
-              Movimenta
-            </button></td>
-          </tr>`).join('')}
-      </tbody>
-    </table>`;
+
+  const table = document.createElement('table');
+  table.className = 'data-table';
+
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Ingrediente</th>
+        <th>Unità</th>
+        <th class="num">Scorta</th>
+        <th class="num">Soglia min.</th>
+        <th>Stato</th>
+        <th class="num">Valore</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+
+  const tbody = table.querySelector('tbody');
+
+  items.forEach(i => {
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+      <td class="fw-medium">${magEsc(i.name)}</td>
+      <td>${magEsc(i.base_unit)}</td>
+      <td class="num tabular">${Number(i.current_stock).toFixed(2)}</td>
+      <td class="num tabular">${Number(i.min_stock) > 0 ? Number(i.min_stock).toFixed(2) : '—'}</td>
+      <td>${magStatusBadge(i.status)}</td>
+      <td class="num tabular">€${(i.current_stock * i.theoretical_unit_cost).toFixed(2)}</td>
+      <td></td>
+    `;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm btn-outline';
+    btn.textContent = 'Movimenta';
+    btn.addEventListener('click', () => {
+      magOpenMovModal(i.id, i.name, i.base_unit, i.min_stock);
+    });
+
+    tr.lastElementChild.appendChild(btn);
+    tbody.appendChild(tr);
+  });
+
+  wrap.innerHTML = '';
+  wrap.appendChild(table);
 }
 
 window.magOpenMovModal = async function(id, name, unit, minStock) {
