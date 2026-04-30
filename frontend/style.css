@@ -424,3 +424,44 @@ label.field-label {
 .empty-state svg { width: 40px; height: 40px; margin-bottom: 12px; }
 .empty-state p   { font-size: var(--text-sm); max-width: 30ch; }
 
+.products-grid .product-btn,
+.pos-catalog .product-btn {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.products-grid .product-btn:hover,
+.pos-catalog .product-btn:hover,
+.products-grid .product-btn:focus-visible,
+.pos-catalog .product-btn:focus-visible {
+  background: var(--color-surface-3);
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
+.products-grid .product-btn .p-name,
+.pos-catalog .product-btn .p-name {
+  color: var(--color-text) !important;
+}
+
+.products-grid .product-btn .p-price,
+.pos-catalog .product-btn .p-price {
+  color: var(--color-primary) !important;
+}
+
+[data-theme="dark"] .products-grid .product-btn,
+[data-theme="dark"] .pos-catalog .product-btn {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .products-grid .product-btn .p-name,
+[data-theme="dark"] .pos-catalog .product-btn .p-name {
+  color: var(--color-text) !important;
+}
+
+[data-theme="dark"] .products-grid .product-btn .p-price,
+[data-theme="dark"] .pos-catalog .product-btn .p-price {
+  color: var(--color-primary) !important;
+}

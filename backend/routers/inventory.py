@@ -79,7 +79,8 @@ def get_movements(ingredient_id: int, db=Depends(get_db)):
 @router.post("/movements", status_code=201)
 def add_movement(body: MovementCreate, db=Depends(get_db)):
     ing = db.execute(
-        "SELECT id FROM ingredients WHERE id = ?", (body.ingredient_id,)
+        "SELECT id, current_stock FROM ingredients WHERE id = ?",
+        (body.ingredient_id,),
     ).fetchone()
     if not ing:
         raise HTTPException(404, "Ingrediente non trovato")
@@ -87,19 +88,22 @@ def add_movement(body: MovementCreate, db=Depends(get_db)):
     if body.movement_type not in ("carico", "scarico", "rettifica"):
         raise HTTPException(422, "movement_type non valido")
 
+    current_stock = float(ing["current_stock"] or 0)
+
     if body.movement_type == "rettifica":
+        new_stock = body.quantity
+        qty_delta = round(new_stock - current_stock, 2)
         db.execute(
             "UPDATE ingredients SET current_stock = ? WHERE id = ?",
-            (body.quantity, body.ingredient_id),
+            (new_stock, body.ingredient_id),
         )
-        qty_delta = body.quantity   # log what we set it to
     elif body.movement_type == "scarico":
         qty_delta = -abs(body.quantity)
         db.execute(
             "UPDATE ingredients SET current_stock = COALESCE(current_stock,0) + ? WHERE id = ?",
             (qty_delta, body.ingredient_id),
         )
-    else:  # carico
+    else:
         qty_delta = abs(body.quantity)
         db.execute(
             "UPDATE ingredients SET current_stock = COALESCE(current_stock,0) + ? WHERE id = ?",
@@ -110,7 +114,8 @@ def add_movement(body: MovementCreate, db=Depends(get_db)):
         "INSERT INTO inventory_movements (ingredient_id, quantity, movement_type, note) VALUES (?,?,?,?)",
         (body.ingredient_id, qty_delta, body.movement_type, body.note),
     )
-    return {"ok": True}
+
+    return {"ok": True, "quantity_delta": qty_delta}
 
 
 @router.patch("/{ingredient_id}/thresholds")

@@ -1,7 +1,11 @@
-
 // ============================================================
 //  View: Gestione Tavoli
 // ============================================================
+
+// Funzione di escaping per prevenire XSS
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 
 async function renderTavoli(container) {
   container.innerHTML = `
@@ -34,25 +38,49 @@ async function renderTavoli(container) {
         grid.innerHTML = `<div class="empty-state"><p>Nessun tavolo configurato.</p></div>`;
         return;
       }
-      grid.innerHTML = tables.map(t => {
-        const statusLabel = { free: 'Libero', occupied: 'Occupato', reserved: 'Riservato' }[t.status];
-        const subtotalNote = t.status === 'occupied' && t.open_order_id
-          ? `<div class="table-info">Comanda #${t.open_order_id}</div>` : '';
-        return `
-          <div class="table-card ${t.status}" data-id="${t.id}" data-order="${t.open_order_id || ''}" data-status="${t.status}">
-            <div class="table-name">${t.name}</div>
-            <div style="margin:6px 0 4px">
-              <span class="table-status-dot"></span>
-              <span style="font-size:var(--text-xs);color:var(--color-text-muted)">${statusLabel}</span>
-            </div>
-            <div class="table-info">${t.capacity} coperti</div>
-            ${subtotalNote}
-          </div>`;
-      }).join('');
 
-      grid.querySelectorAll('.table-card').forEach(card => {
+      // FIX XSS: costruiamo le card con createElement invece di innerHTML con dati raw
+      grid.innerHTML = '';
+      tables.forEach(t => {
+        const statusLabel = { free: 'Libero', occupied: 'Occupato', reserved: 'Riservato' }[t.status] ?? t.status;
+
+        const card = document.createElement('div');
+        card.className = `table-card ${escHtml(t.status)}`;
+        card.dataset.id = t.id;
+        card.dataset.order = t.open_order_id ?? '';
+        card.dataset.status = t.status;
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'table-name';
+        nameEl.textContent = t.name; // textContent: nessun XSS possibile
+
+        const statusRow = document.createElement('div');
+        statusRow.style = 'margin:6px 0 4px';
+        statusRow.innerHTML = `<span class="table-status-dot"></span>`;
+        const statusText = document.createElement('span');
+        statusText.style = 'font-size:var(--text-xs);color:var(--color-text-muted)';
+        statusText.textContent = statusLabel;
+        statusRow.appendChild(statusText);
+
+        const infoEl = document.createElement('div');
+        infoEl.className = 'table-info';
+        infoEl.textContent = `${t.capacity} coperti`;
+
+        card.appendChild(nameEl);
+        card.appendChild(statusRow);
+        card.appendChild(infoEl);
+
+        if (t.status === 'occupied' && t.open_order_id) {
+          const orderInfo = document.createElement('div');
+          orderInfo.className = 'table-info';
+          orderInfo.textContent = `Comanda #${t.open_order_id}`;
+          card.appendChild(orderInfo);
+        }
+
         card.addEventListener('click', () => handleTableClick(card));
+        grid.appendChild(card);
       });
+
     } catch (e) {
       toast('Errore caricamento tavoli: ' + e.message, 'error');
     }
@@ -62,15 +90,13 @@ async function renderTavoli(container) {
     const id = +card.dataset.id;
     const status = card.dataset.status;
     const orderId = card.dataset.order;
-    const name = card.querySelector('.table-name').textContent;
+    const name = card.querySelector('.table-name').textContent; // già testuale, sicuro
 
     if (status === 'occupied' && orderId) {
-      // Vai direttamente al POS con questo ordine
       location.hash = `#pos?order=${orderId}&table=${id}`;
     } else if (status === 'free') {
-      // Chiedi coperti e apri ordine
       openModal(`
-        <div class="modal-title">Apri ${name}</div>
+        <div class="modal-title">Apri ${escHtml(name)}</div>
         <div>
           <label class="field-label">Numero coperti</label>
           <input id="inp-covers" class="input" type="number" min="1" max="20" value="2">
@@ -96,5 +122,4 @@ async function renderTavoli(container) {
 
   document.getElementById('btn-refresh-tavoli').addEventListener('click', loadTavoli);
   await loadTavoli();
-
 }
