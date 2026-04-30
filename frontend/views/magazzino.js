@@ -1,3 +1,4 @@
+
 // ============================================================
 //  View: Magazzino
 // ============================================================
@@ -26,7 +27,6 @@ async function renderMagazzino(container) {
     </div>
 
     <div id="inv-table-wrap" class="table-wrap"></div>
-    <div id="mov-modal" class="modal-overlay" style="display:none"></div>
   `;
 
   document.getElementById('mag-search').addEventListener('input',  magApplyFilter);
@@ -113,16 +113,20 @@ function magRenderTable(items) {
 }
 
 window.magOpenMovModal = async function(id, name, unit, minStock) {
+  document.getElementById('mov-modal')?.remove();
+
   let movs = [];
   try { movs = await fetch(`/api/inventory/movements/${id}`).then(r => r.json()); } catch(_) {}
 
-  const modal = document.getElementById('mov-modal');
+  const modal = document.createElement('div');
+  modal.id = 'mov-modal';
+  modal.className = 'modal-overlay';
   modal.style.display = 'flex';
   modal.innerHTML = `
     <div class="modal modal-lg">
       <div class="modal-header">
         <h3>${magEsc(name)}</h3>
-        <button type="button" class="btn-icon" onclick="magCloseModal()">✕</button>
+        <button type="button" class="btn-icon" id="btn-close-mov">✕</button>
       </div>
       <div class="modal-body modal-split">
         <div class="modal-section">
@@ -172,6 +176,11 @@ window.magOpenMovModal = async function(id, name, unit, minStock) {
       </div>
     </div>`;
 
+  document.body.appendChild(modal);
+
+  document.getElementById('btn-close-mov').addEventListener('click', magCloseModal);
+  modal.addEventListener('click', e => { if (e.target === modal) magCloseModal(); });
+
   document.getElementById('mov-form').addEventListener('submit', async e => {
     e.preventDefault();
     const submitBtn = e.target.querySelector('[type="submit"]');
@@ -206,8 +215,7 @@ window.magOpenMovModal = async function(id, name, unit, minStock) {
 };
 
 window.magCloseModal = function() {
-  const modal = document.getElementById('mov-modal');
-  if (modal) modal.style.display = 'none';
+  document.getElementById('mov-modal')?.remove();
 };
 
 function magEsc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

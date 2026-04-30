@@ -29,9 +29,10 @@ window.toast = function(msg, type = 'info') {
 
 // ── openModal(html, onConfirm) ────────────────────────────────────────────────
 window.openModal = function(html, onConfirm) {
-  document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+  document.querySelectorAll('.modal-overlay[data-app-modal]').forEach(el => el.remove());
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
+  overlay.dataset.appModal = '1';
   overlay.innerHTML = `<div class="modal">${html}</div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
@@ -41,8 +42,9 @@ window.openModal = function(html, onConfirm) {
   });
   return overlay;
 };
+
 window.closeModal = function() {
-  document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+  document.querySelectorAll('.modal-overlay[data-app-modal]').forEach(el => el.remove());
 };
 
 // ── router ────────────────────────────────────────────────────────────────────
@@ -102,7 +104,7 @@ if (ver) ver.textContent = 'v0.2';
 window._routeParams = {};
 
 async function navigate() {
-  const raw    = location.hash.slice(1) || DEFAULT;
+  const raw   = location.hash.slice(1) || DEFAULT;
   const [key, qs] = raw.split('?');
   window._routeParams = Object.fromEntries(new URLSearchParams(qs || ''));
   const routeKey = ROUTE_FNS[key] ? key : DEFAULT;
