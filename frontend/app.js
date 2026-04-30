@@ -1,20 +1,51 @@
-// ── Helper API globale ────────────────────────────────────────────────────────
+// ╔══════════════════════════════════════════════════════════════╗
+//  Bar Gestionale — app.js  (Fase 2)
+// ╚══════════════════════════════════════════════════════════════╝
+
+// ── api() ─────────────────────────────────────────────────────────────────────
 window.api = async function(method, path, body = null) {
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-  };
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (body !== null) opts.body = JSON.stringify(body);
   const res = await fetch(`/api${path}`, opts);
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`${method} ${path} → ${res.status}: ${err}`);
+    let msg = res.statusText;
+    try { const j = await res.json(); msg = j.detail || JSON.stringify(j); } catch (_) {}
+    throw new Error(`${method} /api${path} → ${res.status}: ${msg}`);
   }
   if (res.status === 204) return null;
   return res.json();
 };
 
-// ── Mappa route → nome funzione globale ───────────────────────────────────────
+// ── toast() ───────────────────────────────────────────────────────────────────
+window.toast = function(msg, type = 'info') {
+  const tc = document.getElementById('toast-container');
+  if (!tc) return;
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  tc.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+};
+
+// ── openModal(html, onConfirm) ────────────────────────────────────────────────
+window.openModal = function(html, onConfirm) {
+  document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal">${html}</div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  overlay.querySelector('[data-modal-cancel]')?.addEventListener('click', closeModal);
+  overlay.querySelector('[data-modal-confirm]')?.addEventListener('click', () => {
+    if (typeof onConfirm === 'function') onConfirm(overlay);
+  });
+  return overlay;
+};
+window.closeModal = function() {
+  document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+};
+
+// ── router ────────────────────────────────────────────────────────────────────
 const ROUTE_FNS = {
   tavoli:      'renderTavoli',
   pos:         'renderPos',
@@ -26,9 +57,24 @@ const ROUTE_FNS = {
 
 const DEFAULT   = 'tavoli';
 const container = document.getElementById('view-container');
+const sidebar   = document.getElementById('sidebar');
 const nav       = document.querySelector('.sidebar-nav');
 
-// ── aggiungi voci Magazzino e Fornitori alla sidebar ──────────────────────────
+// ── hamburger mobile ──────────────────────────────────────────────────────────
+const toggle = document.createElement('button');
+toggle.id = 'menu-toggle';
+toggle.setAttribute('aria-label', 'Apri menu');
+toggle.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+document.body.appendChild(toggle);
+
+const backdrop = document.createElement('div');
+backdrop.id = 'sidebar-backdrop';
+document.body.appendChild(backdrop);
+
+toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+backdrop.addEventListener('click', () => sidebar.classList.remove('open'));
+
+// ── nuove voci sidebar ────────────────────────────────────────────────────────
 const NEW_ITEMS = [
   {
     key: 'magazzino', label: 'Magazzino',
@@ -50,64 +96,51 @@ NEW_ITEMS.forEach(({ key, label, svg }) => {
 });
 
 const ver = document.querySelector('.sidebar-version');
-if (ver) ver.textContent = 'v0.2 — Fase 2';
+if (ver) ver.textContent = 'v0.2';
 
-// ── router ────────────────────────────────────────────────────────────────────
+// ── navigate ──────────────────────────────────────────────────────────────────
+window._routeParams = {};
+
 async function navigate() {
-  const hash   = location.hash.slice(1) || DEFAULT;
-  const key    = ROUTE_FNS[hash] ? hash : DEFAULT;
-  const fnName = ROUTE_FNS[key];
-  const fn     = window[fnName];
+  const raw    = location.hash.slice(1) || DEFAULT;
+  const [key, qs] = raw.split('?');
+  window._routeParams = Object.fromEntries(new URLSearchParams(qs || ''));
+  const routeKey = ROUTE_FNS[key] ? key : DEFAULT;
+  const fn       = window[ROUTE_FNS[routeKey]];
 
   document.querySelectorAll('.nav-item').forEach(a =>
-    a.classList.toggle('active', a.dataset.view === key)
-  );
+    a.classList.toggle('active', a.dataset.view === routeKey));
 
+  sidebar.classList.remove('open');
   container.innerHTML = '<div class="loading-spinner"></div>';
 
   if (typeof fn !== 'function') {
-    container.innerHTML = `<div class="error-state"><p>Modulo <strong>${key}</strong> non trovato.<br>Assicurati che views/${key}.js sia incluso in index.html.</p></div>`;
+    container.innerHTML = `<div class="error-state"><p>Modulo <strong>${routeKey}</strong> non trovato.</p></div>`;
     return;
   }
-
   try {
     await fn(container);
   } catch (err) {
     container.innerHTML = `
       <div class="error-state">
-        <p>Errore nel modulo <strong>${key}</strong>:</p>
-        <pre style="font-size:.8em;overflow:auto;white-space:pre-wrap">${err.message}</pre>
+        <p>Errore nel modulo <strong>${routeKey}</strong>:</p>
+        <pre>${err.message}</pre>
       </div>`;
-    console.error('[router]', key, err);
+    console.error('[router]', routeKey, err);
   }
 }
 
 window.addEventListener('hashchange', navigate);
 navigate();
 
-// ── toast globale ─────────────────────────────────────────────────────────────
-window.toast = function(msg, type = 'info') {
-  const tc = document.getElementById('toast-container');
-  if (!tc) return;
-  const t = document.createElement('div');
-  t.className = `toast toast-${type}`;
-  t.textContent = msg;
-  tc.appendChild(t);
-  requestAnimationFrame(() => t.classList.add('show'));
-  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3000);
-};
-
 // ── dark mode ─────────────────────────────────────────────────────────────────
 (function () {
-  const toggle = document.querySelector('[data-theme-toggle]');
-  const root   = document.documentElement;
+  const btn  = document.querySelector('[data-theme-toggle]');
+  const root = document.documentElement;
   let dark = matchMedia('(prefers-color-scheme:dark)').matches;
   root.setAttribute('data-theme', dark ? 'dark' : 'light');
-  toggle?.addEventListener('click', () => {
+  btn?.addEventListener('click', () => {
     dark = !dark;
     root.setAttribute('data-theme', dark ? 'dark' : 'light');
-    toggle.innerHTML = dark
-      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
-      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
   });
 })();

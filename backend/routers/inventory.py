@@ -23,25 +23,26 @@ class ThresholdUpdate(BaseModel):
 def list_inventory(db=Depends(get_db)):
     rows = db.execute("""
         SELECT
-            i.id, i.name, i.base_unit, i.theoretical_unit_cost,
-            COALESCE(i.current_stock, 0) AS current_stock,
-            COALESCE(i.min_stock,     0) AS min_stock,
-            CASE
-                WHEN COALESCE(i.current_stock,0) = 0
-                     AND COALESCE(i.min_stock,0) > 0          THEN 'critical'
-                WHEN COALESCE(i.min_stock,0) > 0
-                     AND COALESCE(i.current_stock,0)
-                         <= COALESCE(i.min_stock,0)            THEN 'critical'
-                WHEN COALESCE(i.min_stock,0) > 0
-                     AND COALESCE(i.current_stock,0)
-                         <= COALESCE(i.min_stock,0) * 1.5      THEN 'low'
-                ELSE 'ok'
-            END AS status
-        FROM ingredients i
-        WHERE i.active = 1
-        ORDER BY
-            CASE status WHEN 'critical' THEN 0 WHEN 'low' THEN 1 ELSE 2 END,
-            i.name
+        i.id,
+        i.name,
+        i.base_unit,
+        i.theoretical_unit_cost,
+        COALESCE(i.current_stock, 0) AS current_stock,
+        COALESCE(i.min_stock, 0) AS min_stock,
+        CASE
+            WHEN COALESCE(i.current_stock,0) = 0
+                 AND COALESCE(i.min_stock,0) > 0 THEN 'critical'
+            WHEN COALESCE(i.min_stock,0) > 0
+                 AND COALESCE(i.current_stock,0) <= COALESCE(i.min_stock,0) THEN 'critical'
+            WHEN COALESCE(i.min_stock,0) > 0
+                 AND COALESCE(i.current_stock,0) <= COALESCE(i.min_stock,0) * 1.5 THEN 'low'
+            ELSE 'ok'
+        END AS status
+    FROM ingredients i
+    WHERE i.active = 1
+    ORDER BY
+        CASE status WHEN 'critical' THEN 0 WHEN 'low' THEN 1 ELSE 2 END,
+        i.name;
     """).fetchall()
     return dict_rows(rows)
 

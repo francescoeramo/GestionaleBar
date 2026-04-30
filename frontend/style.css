@@ -78,8 +78,7 @@ body {
 
 /* ── Layout ──────────────────────────────────────────────── */
 #app {
-  display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
+  display: block;
   min-height: 100dvh;
 }
 
@@ -98,7 +97,11 @@ body {
 #main {
   margin-left: var(--sidebar-w);
   min-height: 100dvh;
+  width: calc(100% - var(--sidebar-w));
+  box-sizing: border-box;
   background: var(--color-bg);
+  width: calc(100% - var(--sidebar-w));
+  box-sizing: border-box;
 }
 
 /* ── Sidebar ─────────────────────────────────────────────── */
@@ -145,7 +148,7 @@ body {
 .sidebar-version { font-size: var(--text-xs); color: var(--color-text-faint); margin-left: auto; }
 
 /* ── View container ──────────────────────────────────────── */
-#view-container { padding: 24px; max-width: 1400px; }
+#view-container { padding: 24px; max-width: 1400px; width: 100%; box-sizing: border-box; }
 
 /* ── Componenti base ─────────────────────────────────────── */
 .btn {
@@ -420,3 +423,4 @@ label.field-label {
 }
 .empty-state svg { width: 40px; height: 40px; margin-bottom: 12px; }
 .empty-state p   { font-size: var(--text-sm); max-width: 30ch; }
+
