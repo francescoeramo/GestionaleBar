@@ -21,11 +21,12 @@ async function renderMagazzino(container) {
         <option value="critical">🔴 Critici</option>
         <option value="low">🟡 In esaurimento</option>
         <option value="ok">🟢 OK</option>
+        <option value="none">⚪ Non monitorati</option>
       </select>
     </div>
 
     <div id="inv-table-wrap" class="table-wrap"></div>
-    <div id="mov-modal" class="modal-backdrop hidden"></div>
+    <div id="mov-modal" class="modal-overlay" style="display:none"></div>
   `;
 
   document.getElementById('mag-search').addEventListener('input',  magApplyFilter);
@@ -49,6 +50,7 @@ function magRenderKpis() {
   const crit = _inv.filter(i => i.status === 'critical').length;
   const low  = _inv.filter(i => i.status === 'low').length;
   const ok   = _inv.filter(i => i.status === 'ok').length;
+  const none = _inv.filter(i => i.status === 'none').length;
   const val  = _inv.reduce((s, i) => s + i.current_stock * i.theoretical_unit_cost, 0);
   const el = document.getElementById('stock-kpis');
   if (!el) return;
@@ -56,6 +58,7 @@ function magRenderKpis() {
     <div class="kpi kpi-error">  <span class="kpi-val">${crit}</span><span class="kpi-lbl">Critici</span></div>
     <div class="kpi kpi-warn">   <span class="kpi-val">${low}</span> <span class="kpi-lbl">Esaurimento</span></div>
     <div class="kpi kpi-ok">     <span class="kpi-val">${ok}</span>  <span class="kpi-lbl">OK</span></div>
+    <div class="kpi kpi-neutral"><span class="kpi-val">${none}</span><span class="kpi-lbl">Non monitorati</span></div>
     <div class="kpi kpi-neutral"><span class="kpi-val">€${val.toFixed(0)}</span><span class="kpi-lbl">Valore scorte</span></div>
   `;
 }
@@ -67,8 +70,13 @@ function magApplyFilter() {
 }
 
 function magStatusBadge(s) {
-  const m = { critical:['badge badge-error','🔴 Critico'], low:['badge badge-warn','🟡 Esaurimento'], ok:['badge badge-ok','🟢 OK'] };
-  const [cls,txt] = m[s] || ['badge','—'];
+  const m = {
+    critical: ['badge badge-error', '🔴 Critico'],
+    low:      ['badge badge-warn',  '🟡 Esaurimento'],
+    ok:       ['badge badge-ok',    '🟢 OK'],
+    none:     ['badge',             '⚪ Nessuna soglia'],
+  };
+  const [cls, txt] = m[s] || ['badge', '—'];
   return `<span class="${cls}">${txt}</span>`;
 }
 
@@ -83,7 +91,7 @@ function magRenderTable(items) {
     <table class="data-table">
       <thead><tr>
         <th>Ingrediente</th><th>Unità</th>
-        <th class="num">Scorta</th><th class="num">Minimo</th>
+        <th class="num">Scorta</th><th class="num">Soglia min.</th>
         <th>Stato</th><th class="num">Valore</th><th></th>
       </tr></thead>
       <tbody>
@@ -92,7 +100,7 @@ function magRenderTable(items) {
             <td class="fw-medium">${magEsc(i.name)}</td>
             <td>${magEsc(i.base_unit)}</td>
             <td class="num tabular">${Number(i.current_stock).toFixed(2)}</td>
-            <td class="num tabular">${Number(i.min_stock).toFixed(2)}</td>
+            <td class="num tabular">${Number(i.min_stock) > 0 ? Number(i.min_stock).toFixed(2) : '<span class="text-muted">—</span>'}</td>
             <td>${magStatusBadge(i.status)}</td>
             <td class="num tabular">€${(i.current_stock * i.theoretical_unit_cost).toFixed(2)}</td>
             <td><button class="btn btn-sm btn-outline"
@@ -107,13 +115,14 @@ function magRenderTable(items) {
 window.magOpenMovModal = async function(id, name, unit, minStock) {
   let movs = [];
   try { movs = await fetch(`/api/inventory/movements/${id}`).then(r => r.json()); } catch(_) {}
+
   const modal = document.getElementById('mov-modal');
-  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
   modal.innerHTML = `
     <div class="modal modal-lg">
       <div class="modal-header">
         <h3>${magEsc(name)}</h3>
-        <button class="btn-icon" onclick="magCloseModal()">✕</button>
+        <button type="button" class="btn-icon" onclick="magCloseModal()">✕</button>
       </div>
       <div class="modal-body modal-split">
         <div class="modal-section">
@@ -135,7 +144,7 @@ window.magOpenMovModal = async function(id, name, unit, minStock) {
               <div class="form-group">
                 <label>Soglia minima (${magEsc(unit)})</label>
                 <input type="number" name="min_stock" class="input" step="0.01" min="0"
-                  placeholder="Attuale: ${Number(minStock).toFixed(2)}">
+                  placeholder="${Number(minStock) > 0 ? 'Attuale: ' + Number(minStock).toFixed(2) : 'Non impostata'}">
               </div>
             </div>
             <div class="form-group">
@@ -165,11 +174,13 @@ window.magOpenMovModal = async function(id, name, unit, minStock) {
 
   document.getElementById('mov-form').addEventListener('submit', async e => {
     e.preventDefault();
-    const fd      = new FormData(e.target);
-    const type    = fd.get('type');
-    const qty     = parseFloat(fd.get('qty'));
-    const minVal  = fd.get('min_stock');
-    const note    = fd.get('note') || null;
+    const submitBtn = e.target.querySelector('[type="submit"]');
+    submitBtn.disabled = true;
+    const fd     = new FormData(e.target);
+    const type   = fd.get('type');
+    const qty    = parseFloat(fd.get('qty'));
+    const minVal = fd.get('min_stock');
+    const note   = fd.get('note') || null;
 
     try {
       await fetch('/api/inventory/movements', {
@@ -185,21 +196,23 @@ window.magOpenMovModal = async function(id, name, unit, minStock) {
         });
       }
       toast('Movimento registrato', 'success');
+      magCloseModal();
+      await magLoad();
     } catch(err) {
       toast('Errore: ' + err.message, 'error');
+      submitBtn.disabled = false;
     }
-    magCloseModal();
-    await magLoad();
   });
 };
 
 window.magCloseModal = function() {
-  document.getElementById('mov-modal')?.classList.add('hidden');
+  const modal = document.getElementById('mov-modal');
+  if (modal) modal.style.display = 'none';
 };
 
 function magEsc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function magMovLabel(t) { return {carico:'📦 Carico',scarico:'📤 Scarico',rettifica:'✏️ Rettifica'}[t]||t; }
+function magMovLabel(t) { return { carico:'📦 Carico', scarico:'📤 Scarico', rettifica:'✏️ Rettifica' }[t] || t; }
 function magFmtDate(dt) {
   if (!dt) return '';
-  return new Date(dt).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  return new Date(dt).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
 }

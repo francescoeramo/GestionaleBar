@@ -25,8 +25,8 @@ async function renderFornitori(container) {
       <input id="sup-search" type="search" class="input" placeholder="Cerca fornitore…">
     </div>
     <div id="sup-grid" class="cards-grid"></div>
-    <div id="sup-form-modal"   class="modal-backdrop hidden"></div>
-    <div id="sup-detail-modal" class="modal-backdrop hidden"></div>
+    <div id="sup-form-modal"   class="modal-overlay" style="display:none"></div>
+    <div id="sup-detail-modal" class="modal-overlay" style="display:none"></div>
   `;
 
   document.getElementById('btn-new-sup').addEventListener('click', () => supOpenForm());
@@ -67,7 +67,6 @@ function supRenderGrid(items) {
     const card = document.createElement('div');
     card.className = 'card card-hover';
 
-    // Header
     const header = document.createElement('div');
     header.className = 'card-header';
     const title = document.createElement('span');
@@ -80,12 +79,11 @@ function supRenderGrid(items) {
     header.appendChild(badge);
     card.appendChild(header);
 
-    // Meta fields
     const metas = [
       { val: s.contact_name, prefix: '👤 ' },
       { val: s.phone,        prefix: '📞 ' },
       { val: s.email,        prefix: '✉️ ' },
-      { val: s.notes,        prefix: '',   cls: 'text-muted' },
+      { val: s.notes,        prefix: '', cls: 'text-muted' },
     ];
     metas.forEach(({ val, prefix, cls }) => {
       if (!val) return;
@@ -95,7 +93,6 @@ function supRenderGrid(items) {
       card.appendChild(p);
     });
 
-    // Actions
     const actions = document.createElement('div');
     actions.className = 'card-actions';
 
@@ -113,7 +110,6 @@ function supRenderGrid(items) {
     actions.appendChild(delBtn);
     card.appendChild(actions);
 
-    // Click card → dettaglio
     card.addEventListener('click', () => supDetail(s.id));
     grid.appendChild(card);
   });
@@ -122,12 +118,12 @@ function supRenderGrid(items) {
 // ── Form nuovo/modifica fornitore ────────────────────────────
 function supOpenForm(data = {}) {
   const modal = document.getElementById('sup-form-modal');
-  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
   modal.innerHTML = `
     <div class="modal">
       <div class="modal-header">
         <h3>${data.id ? 'Modifica fornitore' : 'Nuovo fornitore'}</h3>
-        <button class="btn-icon" id="btn-close-form">✕</button>
+        <button type="button" class="btn-icon" id="btn-close-form">✕</button>
       </div>
       <div class="modal-body">
         <form id="sup-form">
@@ -160,8 +156,6 @@ function supOpenForm(data = {}) {
       </div>
     </div>`;
 
-  // FIX: popoliamo i valori con .value dopo aver creato il DOM
-  // (evita injection tramite attributo value= con dati non trusted)
   const form = document.getElementById('sup-form');
   form.elements['name'].value         = data.name         ?? '';
   form.elements['contact_name'].value = data.contact_name ?? '';
@@ -177,7 +171,6 @@ function supOpenForm(data = {}) {
     submitBtn.disabled = true;
 
     const body = Object.fromEntries(new FormData(e.target).entries());
-    // Rimuovi campi vuoti per non sovrascrivere con stringhe vuote in PATCH
     Object.keys(body).forEach(k => { if (body[k] === '') delete body[k]; });
 
     try {
@@ -192,13 +185,16 @@ function supOpenForm(data = {}) {
       await supReload();
     } catch (err) {
       toast('Errore: ' + err.message, 'error');
-      submitBtn.disabled = false;
+    } finally {
+      const btn = document.getElementById('btn-sup-submit');
+      if (btn) btn.disabled = false;
     }
   });
 }
 
 function supCloseForm() {
-  document.getElementById('sup-form-modal')?.classList.add('hidden');
+  const modal = document.getElementById('sup-form-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 async function supDelete(id) {
@@ -224,20 +220,19 @@ async function supDetail(id) {
 
   const linked = new Set(sup.ingredients.map(i => i.id));
   const modal  = document.getElementById('sup-detail-modal');
-  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
 
   function drawDetail() {
     modal.innerHTML = `
       <div class="modal modal-lg">
         <div class="modal-header">
           <h3 id="detail-title"></h3>
-          <button class="btn-icon" id="btn-close-detail">✕</button>
+          <button type="button" class="btn-icon" id="btn-close-detail">✕</button>
         </div>
         <div class="modal-body modal-split">
           <div class="modal-section">
             <h4>Ingredienti associati</h4>
             <div id="detail-ing-table"></div>
-
             <h4 style="margin-top:var(--space-5)">Aggiungi ingrediente</h4>
             <form id="link-form" class="form-row" style="align-items:flex-end;gap:var(--space-3)">
               <div class="form-group" style="flex:1">
@@ -256,17 +251,15 @@ async function supDetail(id) {
           <div class="modal-section">
             <h4>Scheda fornitore</h4>
             <dl class="detail-list" id="detail-dl"></dl>
-            <button class="btn btn-outline btn-full" style="margin-top:var(--space-4)" id="btn-edit-from-detail">
+            <button type="button" class="btn btn-outline btn-full" style="margin-top:var(--space-4)" id="btn-edit-from-detail">
               Modifica scheda
             </button>
           </div>
         </div>
       </div>`;
 
-    // Titolo (textContent: sicuro)
     document.getElementById('detail-title').textContent = sup.name;
 
-    // Scheda info
     const dl = document.getElementById('detail-dl');
     dl.innerHTML = [
       supRow('Referente', sup.contact_name),
@@ -275,7 +268,6 @@ async function supDetail(id) {
       supRow('Note',      sup.notes),
     ].join('');
 
-    // Tabella ingredienti associati
     const ingTable = document.getElementById('detail-ing-table');
     if (!sup.ingredients.length) {
       ingTable.innerHTML = `<p class="text-muted">Nessun ingrediente associato</p>`;
@@ -285,9 +277,9 @@ async function supDetail(id) {
       table.innerHTML = `<thead><tr><th>Ingrediente</th><th>Unità</th><th class="num">Prezzo/unità</th><th></th></tr></thead>`;
       const tbody = document.createElement('tbody');
       sup.ingredients.forEach(ing => {
-        const tr = document.createElement('tr');
-        const tdName  = document.createElement('td'); tdName.textContent  = ing.name;
-        const tdUnit  = document.createElement('td'); tdUnit.textContent  = ing.unit ?? '—';
+        const tr      = document.createElement('tr');
+        const tdName  = document.createElement('td'); tdName.textContent = ing.name;
+        const tdUnit  = document.createElement('td'); tdUnit.textContent = ing.unit ?? '—';
         const tdPrice = document.createElement('td'); tdPrice.className = 'num tabular';
         tdPrice.textContent = ing.unit_price != null ? `€${Number(ing.unit_price).toFixed(4)}` : '—';
         const tdAct   = document.createElement('td');
@@ -315,31 +307,32 @@ async function supDetail(id) {
       ingTable.appendChild(table);
     }
 
-    // Select ingredienti non ancora associati
     const sel = document.getElementById('link-ing-select');
     _ing.filter(i => !linked.has(i.id)).forEach(i => {
       const opt = document.createElement('option');
       opt.value = i.id;
-      opt.textContent = `${i.name}${i.unit ? ' (' + i.unit + ')' : ''}`;
+      opt.textContent = `${i.name}${i.base_unit ? ' (' + i.base_unit + ')' : ''}`;
       sel.appendChild(opt);
     });
 
-    // Listener X e Modifica
     document.getElementById('btn-close-detail').addEventListener('click', supCloseDetail);
     document.getElementById('btn-edit-from-detail').addEventListener('click', () => {
       supCloseDetail();
       supOpenForm(sup);
     });
 
-    // Form associa ingrediente
     document.getElementById('link-form').addEventListener('submit', async e => {
       e.preventDefault();
-      const submitBtn = document.getElementById('btn-link-submit');
+      const submitBtn    = document.getElementById('btn-link-submit');
       submitBtn.disabled = true;
-      const fd            = new FormData(e.target);
+      const fd           = new FormData(e.target);
       const ingredient_id = parseInt(fd.get('ingredient_id'));
       const unit_price    = fd.get('unit_price') ? parseFloat(fd.get('unit_price')) : null;
-      if (!ingredient_id) { toast('Seleziona un ingrediente', 'error'); submitBtn.disabled = false; return; }
+      if (!ingredient_id) {
+        toast('Seleziona un ingrediente', 'error');
+        submitBtn.disabled = false;
+        return;
+      }
       try {
         await api('POST', `/suppliers/${id}/ingredients`, { ingredient_id, unit_price });
         sup = await api('GET', `/suppliers/${id}`);
@@ -357,7 +350,8 @@ async function supDetail(id) {
 }
 
 function supCloseDetail() {
-  document.getElementById('sup-detail-modal')?.classList.add('hidden');
+  const modal = document.getElementById('sup-detail-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 async function supReload() {
