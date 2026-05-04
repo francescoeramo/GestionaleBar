@@ -4,10 +4,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bar Gestionale</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Bar Gestionale">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="style_supplement.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style_supplement.css">
+
+  <!-- Stili stampa scontrino -->
+  <style>
+    @media print {
+      #sidebar, #menu-toggle, #sidebar-backdrop,
+      #toast-container, .no-print { display: none !important; }
+      #main { margin: 0 !important; padding: 0 !important; }
+      #print-receipt { display: block !important; }
+      body { background: white; color: black; font-family: monospace; font-size: 12px; }
+    }
+    #print-receipt { display: none; }
+  </style>
 </head>
 <body>
 
@@ -35,7 +56,7 @@
       </a>
       <a href="#menu"        class="nav-item" data-view="menu">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M4 9h8M4 13h10"/><rect x="12" y="10" width="5" height="7" rx="1"/></svg>
-        Menu & Ricette
+        Menu &amp; Ricette
       </a>
       <a href="#ingredienti" class="nav-item" data-view="ingredienti">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3 C6 3 3 7 3 11 a7 7 0 0 0 14 0 C17 7 14 3 10 3Z"/><path d="M10 3 v4M7 5.5 l2 2M13 5.5 l-2 2"/></svg>
@@ -46,17 +67,18 @@
       <button class="theme-toggle" data-theme-toggle aria-label="Cambia tema">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
-      <span class="sidebar-version">v0.1 — Fase 1</span>
+      <span class="sidebar-version">v0.3</span>
     </div>
   </aside>
 
   <!-- Main content -->
   <main id="main">
-    <div id="view-container">
-      <!-- Le view vengono iniettate qui via JS -->
-    </div>
+    <div id="view-container"></div>
   </main>
 </div>
+
+<!-- Area stampa scontrino (nascosta a schermo, visibile solo in stampa) -->
+<div id="print-receipt"></div>
 
 <!-- Toast container -->
 <div id="toast-container"></div>
@@ -67,7 +89,7 @@
 <script src="views/ingredienti.js"></script>
 <script src="views/magazzino.js"></script>
 <script src="views/fornitori.js"></script>
-    <script src="views/storico.js"></script>
+<script src="views/storico.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,17 @@
+[Unit]
+Description=Bar Gestionale — FastAPI backend
+After=network.target
+
+[Service]
+Type=simple
+User=fra
+WorkingDirectory=/home/fra/Desktop/bar-gestionale
+EnvironmentFile=/home/fra/Desktop/bar-gestionale/.env
+ExecStart=/home/fra/Desktop/bar-gestionale/.venv/bin/python -m backend.main
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
