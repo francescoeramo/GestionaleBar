@@ -5,9 +5,9 @@ After=network.target
 [Service]
 Type=simple
 User=fra
-WorkingDirectory=/home/fra/Desktop/bar-gestionale
-EnvironmentFile=-/home/fra/Desktop/bar-gestionale/.env
-ExecStart=/home/fra/Desktop/bar-gestionale/.venv/bin/python -m backend.main
+WorkingDirectory=/opt/bar-gestionale
+EnvironmentFile=-/opt/bar-gestionale/.env
+ExecStart=/opt/bar-gestionale/.venv/bin/python -m backend.main
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
