@@ -2,7 +2,6 @@
 //  View: POS / Comande
 // ============================================================
 
-// Funzione di escaping per prevenire XSS (anche negli attributi HTML)
 function posEsc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
@@ -62,7 +61,6 @@ async function renderPos(container) {
   let currentCat = null;
   let orderItems = [];
 
-  // ── Carica categorie e prodotti ──────────────────────────────
   async function loadCatalog() {
     [categories, products] = await Promise.all([
       api('GET', '/categories/'),
@@ -85,7 +83,7 @@ async function renderPos(container) {
     categories.forEach(c => {
       const btn = document.createElement('button');
       btn.className = `cat-btn ${currentCat === c.id ? 'active' : ''}`;
-      btn.textContent = c.name; // textContent: sicuro contro XSS
+      btn.textContent = c.name;
       btn.addEventListener('click', () => { currentCat = c.id; renderCatFilters(); renderProducts(); });
       el.appendChild(btn);
     });
@@ -100,21 +98,17 @@ async function renderPos(container) {
       return;
     }
 
-    // FIX XSS: costruiamo i bottoni prodotto con createElement
-    // I data-* vengono impostati con dataset (sicuro) invece di template literal
     grid.innerHTML = '';
     filtered.forEach(p => {
       const btn = document.createElement('button');
       btn.className = 'product-btn';
-      // Usiamo dataset per evitare injection negli attributi
-      btn.dataset.id = p.id;
+      btn.dataset.id    = p.id;
       btn.dataset.price = p.sale_price;
-      btn.dataset.mods = p.allow_mods;
-      // NON mettiamo il nome nel dataset — lo leggiamo dall'oggetto p direttamente nel click handler
+      btn.dataset.mods  = p.allow_mods;
 
       const nameEl = document.createElement('div');
       nameEl.className = 'p-name';
-      nameEl.textContent = p.name; // textContent: nessun XSS
+      nameEl.textContent = p.name;
 
       const priceEl = document.createElement('div');
       priceEl.className = 'p-price';
@@ -122,8 +116,6 @@ async function renderPos(container) {
 
       btn.appendChild(nameEl);
       btn.appendChild(priceEl);
-
-      // Salviamo i dati del prodotto sull'elemento (no DOM attribute injection)
       btn._product = { id: p.id, name: p.name, price: p.sale_price, canMod: !!p.allow_mods };
       btn.addEventListener('click', () => handleProductClick(btn._product));
       grid.appendChild(btn);
@@ -152,7 +144,7 @@ async function renderPos(container) {
           <button class="btn btn-primary" data-modal-confirm>Aggiungi</button>
         </div>
       `, async (overlay) => {
-        const qty = +overlay.querySelector('#inp-qty').value || 1;
+        const qty  = +overlay.querySelector('#inp-qty').value || 1;
         const note = overlay.querySelector('#inp-note').value.trim() || null;
         await addItem({
           item_type: 'menu',
@@ -174,14 +166,13 @@ async function renderPos(container) {
     }
   }
 
-  // ── Fuori menù ───────────────────────────────────────────────
   document.getElementById('btn-free-item').addEventListener('click', () => {
     if (!currentOrderId) { toast('Seleziona prima un tavolo', 'info'); return; }
     openModal(`
       <div class="modal-title">Prodotto fuori menù</div>
       <div>
         <label class="field-label">Nome prodotto</label>
-        <input id="fi-name" class="input" type="text" placeholder="Es. Mojito speciale, Spritz analcolico…">
+        <input id="fi-name" class="input" type="text" placeholder="Es. Mojito speciale…">
       </div>
       <div class="mt-4 grid-2">
         <div>
@@ -229,7 +220,6 @@ async function renderPos(container) {
     }
   }
 
-  // ── Rendering ordine ─────────────────────────────────────────
   function renderOrderItems() {
     const el = document.getElementById('order-items');
     const active = orderItems.filter(i => i.status !== 'cancelled');
@@ -250,12 +240,12 @@ async function renderPos(container) {
 
         const nameWrap = document.createElement('span');
         nameWrap.className = 'oi-name';
-        nameWrap.textContent = item.product_name_snapshot; // sicuro
+        nameWrap.textContent = item.product_name_snapshot;
 
         if (item.notes) {
           const modTag = document.createElement('span');
           modTag.className = 'oi-mod-tag';
-          modTag.textContent = `↳ ${item.notes}`; // sicuro
+          modTag.textContent = `↳ ${item.notes}`;
           nameWrap.appendChild(modTag);
         }
 
@@ -268,7 +258,6 @@ async function renderPos(container) {
         delBtn.title = 'Rimuovi';
         delBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l10 10M15 5L5 15"/></svg>`;
 
-        // FIX: disabilitiamo il bottone durante la chiamata per evitare double-click
         delBtn.addEventListener('click', async () => {
           delBtn.disabled = true;
           try {
@@ -297,12 +286,10 @@ async function renderPos(container) {
     document.getElementById('btn-cancel-order').disabled = !currentOrderId;
   }
 
-  // ── Incasso ──────────────────────────────────────────────────
+  // ── Incasso ──────────────────────────────────────────────────────────────
   document.getElementById('btn-pay').addEventListener('click', () => showPayModal());
 
   async function showPayModal() {
-    // FIX: rileggiamo il totale dal server prima di aprire il modal
-    // per evitare di usare dati stale se l'ordine è stato modificato altrove
     let freshOrder;
     try {
       freshOrder = await api('GET', `/orders/${currentOrderId}`);
@@ -350,18 +337,15 @@ async function renderPos(container) {
         <button class="btn btn-success" id="btn-confirm-pay" data-modal-confirm>Conferma pagamento</button>
       </div>
     `, async (ov) => {
-      // FIX: disabilita il bottone subito per evitare doppio submit
       const confirmBtn = ov.querySelector('#btn-confirm-pay');
       if (confirmBtn) confirmBtn.disabled = true;
 
-      const method = ov.querySelector('#pay-method').value;
-      const cashGiven = method === 'cash' ? +ov.querySelector('#pay-cash-given').value : null;
+      const method      = ov.querySelector('#pay-method').value;
+      const cashGiven   = method === 'cash' ? +ov.querySelector('#pay-cash-given').value : null;
       const voucherCode = method === 'voucher' ? ov.querySelector('#pay-voucher-code').value : null;
-      const discType = ov.querySelector('#discount-type').value || null;
-      const discVal = +ov.querySelector('#discount-val').value || 0;
+      const discType    = ov.querySelector('#discount-type').value || null;
+      const discVal     = +ov.querySelector('#discount-val').value || 0;
 
-      // Il calcolo del netto è solo per determinare l'importo da pagare lato frontend,
-      // il backend ricalcola e valida indipendentemente
       let netTotal = total;
       if (discType === 'percent') netTotal = total * (1 - discVal / 100);
       else if (discType === 'flat') netTotal = Math.max(total - discVal, 0);
@@ -379,25 +363,62 @@ async function renderPos(container) {
           discount_type: discType,
           discount_value: discVal,
         });
+
+        // Rileggi ordine chiuso e pagamenti per la stampa
+        const closedOrder = await api('GET', `/orders/${currentOrderId}`);
+        const payments    = await api('GET', `/payments/order/${currentOrderId}`);
+
         toast('Pagamento registrato! Conto chiuso.', 'success');
+
+        // ── Dialog stampa scontrino ────────────────────────────────
+        openModal(`
+          <div class="modal-title">Pagamento completato ✓</div>
+          <p style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:1rem">
+            Vuoi stampare lo scontrino?
+          </p>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" id="btn-skip-print" data-modal-cancel>No, chiudi</button>
+            <button class="btn btn-primary" id="btn-do-print">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7V3h10v4"/><rect x="2" y="7" width="16" height="7" rx="1.5"/><path d="M5 14v3h10v-3"/><circle cx="15" cy="10.5" r="1"/></svg>
+              Stampa scontrino
+            </button>
+          </div>
+        `);
+
+        document.getElementById('btn-do-print')?.addEventListener('click', () => {
+          closeModal();
+          if (typeof window.printReceipt === 'function') {
+            window.printReceipt(closedOrder, payments);
+          } else {
+            toast('Modulo stampa non caricato', 'error');
+          }
+        });
+
         currentOrderId = null;
         orderItems = [];
         renderOrderItems();
         document.getElementById('order-label').textContent = 'Nessun ordine';
         document.getElementById('order-meta').textContent = '';
-        location.hash = '#tavoli';
+
+        // Torna ai tavoli dopo chiusura del dialog stampa
+        document.getElementById('btn-skip-print')?.addEventListener('click', () => {
+          location.hash = '#tavoli';
+        });
+        document.getElementById('btn-do-print')?.addEventListener('click', () => {
+          location.hash = '#tavoli';
+        }, { once: true });
+
       } catch (e) {
         toast('Errore pagamento: ' + e.message, 'error');
         if (confirmBtn) confirmBtn.disabled = false;
       }
     });
 
-    // FIX: accediamo agli elementi direttamente tramite overlay (no setTimeout)
-    const methodSel = overlay.querySelector('#pay-method');
-    const cashDiv = overlay.querySelector('#pay-cash-extra');
+    const methodSel  = overlay.querySelector('#pay-method');
+    const cashDiv    = overlay.querySelector('#pay-cash-extra');
     const voucherDiv = overlay.querySelector('#pay-voucher-extra');
-    const cashInput = overlay.querySelector('#pay-cash-given');
-    const changeDiv = overlay.querySelector('#pay-change');
+    const cashInput  = overlay.querySelector('#pay-cash-given');
+    const changeDiv  = overlay.querySelector('#pay-change');
 
     function updateChange() {
       const given = +cashInput.value;
@@ -409,12 +430,12 @@ async function renderPos(container) {
     updateChange();
 
     methodSel?.addEventListener('change', () => {
-      cashDiv.style.display = methodSel.value === 'cash' ? '' : 'none';
+      cashDiv.style.display    = methodSel.value === 'cash'    ? '' : 'none';
       voucherDiv.style.display = methodSel.value === 'voucher' ? '' : 'none';
     });
   }
 
-  // ── Annulla ordine ───────────────────────────────────────────
+  // ── Annulla ordine ──────────────────────────────────────────────────────────
   document.getElementById('btn-cancel-order').addEventListener('click', () => {
     if (!currentOrderId) return;
     openModal(`
@@ -443,7 +464,7 @@ async function renderPos(container) {
     });
   });
 
-  // ── Se arriva con un ordine esistente, caricalo ──────────────
+  // ── Carica ordine esistente ─────────────────────────────────────────────────
   async function loadExistingOrder(orderId) {
     try {
       const order = await api('GET', `/orders/${orderId}`);
@@ -458,7 +479,7 @@ async function renderPos(container) {
     }
   }
 
-  // ── Init ─────────────────────────────────────────────────────
+  // ── Init ──────────────────────────────────────────────────────────────────
   await loadCatalog();
   if (currentOrderId) {
     document.getElementById('order-label').textContent = `Caricamento ordine #${currentOrderId}…`;
