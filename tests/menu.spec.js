@@ -26,32 +26,34 @@ test.describe('Menu', () => {
     await page.locator('#pm-price').fill('4.50');
     await page.locator('#pm-desc').fill('Creato da Playwright');
     await page.locator('[data-modal-confirm]').click();
+    await page.locator('[data-app-modal]').waitFor({ state: 'detached' });
 
     await expect(page.locator('#menu-content')).toContainText(name);
   });
+
   test('modifica un prodotto creato dal test', async ({ page }) => {
-      const original = uniqueName('Prodotto Modifica');
-      const updated = `${original} Edit`;
-      await gotoView(page, 'menu');
+    const original = uniqueName('Prodotto Modifica');
+    const updated  = `${original} Edit`;
+    await gotoView(page, 'menu');
 
-      await page.locator('#btn-new-product').click();
-      await expect(page.locator('#pm-name')).toBeVisible();
-      await page.locator('#pm-name').fill(original);
-      await page.locator('#pm-price').fill('5.00');
-      await page.locator('[data-modal-confirm]').click();         // ← solo questo
-      await page.locator('[data-app-modal]').waitFor({ state: 'detached' }); // ← aggiunto
+    await page.locator('#btn-new-product').click();
+    await expect(page.locator('#pm-name')).toBeVisible();
+    await page.locator('#pm-name').fill(original);
+    await page.locator('#pm-price').fill('5.00');
+    await page.locator('[data-modal-confirm]').click();
+    await page.locator('[data-app-modal]').waitFor({ state: 'detached' });
 
-      await expect(page.locator('#menu-content')).toContainText(original);
+    await expect(page.locator('#menu-content')).toContainText(original);
 
-      const card = page.locator('#menu-content .card').filter({ hasText: original }).first();
-      await expect(card).toBeVisible();
-      await card.locator('button[data-edit]').click();
+    const card = page.locator('#menu-content .card').filter({ hasText: original }).first();
+    await expect(card).toBeVisible();
+    await card.locator('button[data-edit]').click();
 
-      await expect(page.locator('#pm-name')).toBeVisible();
-      await page.locator('#pm-name').fill(updated);
-      await page.locator('[data-modal-confirm]').click();
-      await page.locator('[data-app-modal]').waitFor({ state: 'detached' });
+    await expect(page.locator('#pm-name')).toBeVisible();
+    await page.locator('#pm-name').fill(updated);
+    await page.locator('[data-modal-confirm]').click();
+    await page.locator('[data-app-modal]').waitFor({ state: 'detached' });
 
-      await expect(page.locator('#menu-content')).toContainText(updated);
-    });
+    await expect(page.locator('#menu-content')).toContainText(updated);
+  });
 });
