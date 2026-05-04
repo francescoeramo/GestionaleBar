@@ -55,6 +55,7 @@ const ROUTE_FNS = {
   ingredienti: 'renderIngredienti',
   magazzino:   'renderMagazzino',
   fornitori:   'renderFornitori',
+  storico:     'renderStorico',
 };
 
 const DEFAULT   = 'tavoli';
@@ -86,6 +87,10 @@ const NEW_ITEMS = [
     key: 'fornitori', label: 'Fornitori',
     svg: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="8" width="12" height="9" rx="1"/><path d="M13 11h3l2 3v3h-5V11Z"/><circle cx="5" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>',
   },
+  {
+    key: 'storico', label: 'Storico',
+    svg: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 2"/></svg>',
+  },
 ];
 NEW_ITEMS.forEach(({ key, label, svg }) => {
   if (nav.querySelector(`[data-view="${key}"]`)) return;
@@ -98,7 +103,7 @@ NEW_ITEMS.forEach(({ key, label, svg }) => {
 });
 
 const ver = document.querySelector('.sidebar-version');
-if (ver) ver.textContent = 'v0.2';
+if (ver) ver.textContent = 'v0.3';
 
 // ── navigate ──────────────────────────────────────────────────────────────────
 window._routeParams = {};
